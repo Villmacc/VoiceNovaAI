@@ -1,101 +1,70 @@
-# Step 1a: Setup Text-to-Speech (TTS) with gTTS
 import os
-from gtts import gTTS
-import subprocess
-import platform
-
-# def text_to_speech_with_gtts(input_text, output_filepath):
-#     """
-#     Convert text to speech using gTTS and save it as an MP3 file.
-#     Autoplay the generated audio file.
-
-#     Args:
-#         input_text (str): Text to convert to speech.
-#         output_filepath (str): Path to save the output MP3 file.
-#     """
-#     try:
-#         # Create gTTS object
-#         audioobj = gTTS(
-#             text=input_text,
-#             lang="en",
-#             slow=False
-#         )
-#         # Save the audio file
-#         audioobj.save(output_filepath)
-#         print(f"Audio saved to {output_filepath}")
-
-#         # Autoplay the file using subprocess
-#         autoplay_audio(output_filepath)
-
-#     except Exception as e:
-#         print(f"An error occurred in gTTS: {e}")
-
-# Step 1b: Setup Text-to-Speech (TTS) with ElevenLabs
 import elevenlabs
-from elevenlabs.client import ElevenLabs
 from dotenv import load_dotenv
+from gtts import gTTS
 
-# Load ElevenLabs API key from .env
+# Load the ElevenLabs API key from environment variables
 load_dotenv()
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-if not ELEVENLABS_API_KEY:
-    raise ValueError("ELEVENLABS_API_KEY is not set. Please check your .env file.")
 
-def text_to_speech_with_elevenlabs(input_text, output_filepath):
+def text_to_speech_with_gtts(input_text, output_filepath):
     """
-    Convert text to speech using ElevenLabs and save it as an MP3 file.
-    Autoplay the generated audio file.
+    Fallback function to convert text to speech using Google Text-to-Speech.
 
     Args:
         input_text (str): Text to convert to speech.
         output_filepath (str): Path to save the output MP3 file.
     """
     try:
-        # Create an instance of the ElevenLabs client
-        client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+        tts = gTTS(text=input_text, lang='en')
+        tts.save(output_filepath)
+        print(f"Audio successfully saved to {output_filepath} using gTTS")
+        return None
+    except Exception as e:
+        print(f"An error occurred in gTTS: {e}")
+        return f"An error occurred in gTTS: {e}"
 
-        # Generate audio
-        audio = client.generate(
+def text_to_speech_with_elevenlabs(input_text, output_filepath):
+    """
+    Convert text to speech using ElevenLabs and save it as an MP3 file.
+    Falls back to gTTS if ElevenLabs fails.
+
+    Args:
+        input_text (str): Text to convert to speech.
+        output_filepath (str): Path to save the output MP3 file.
+    """
+    if not ELEVENLABS_API_KEY:
+        print("ELEVENLABS_API_KEY not found, falling back to gTTS")
+        return text_to_speech_with_gtts(input_text, output_filepath)
+
+    try:
+        # Create an instance of the ElevenLabs client
+        client = elevenlabs.ElevenLabs(api_key=ELEVENLABS_API_KEY)
+
+        # Generate the audio (the result is a generator object)
+        print(f"Generating audio for text: {input_text}")  # Debugging line
+        audio_generator = client.generate(
             text=input_text,
-            voice="Aria",
-            output_format="mp3_22050_32",
+            voice="Aria",  # Ensure you're using the correct voice here
+            output_format="mp3_22050_32",  # Request mp3 format
             model="eleven_turbo_v2"
         )
-        # Save the audio file
-        elevenlabs.save(audio, output_filepath)
-        print(f"Audio saved to {output_filepath}")
 
-        # Autoplay the file using subprocess
-        autoplay_audio(output_filepath)
+        # Convert the generator to bytes and save as an MP3 file
+        with open(output_filepath, 'wb') as f:
+            for chunk in audio_generator:
+                f.write(chunk)  # Write chunks of the audio generator to the file
 
+        print(f"Audio successfully saved to {output_filepath}")  # Debugging line
+        return None
     except Exception as e:
-        return f"An error occurred in ElevenLabs: {e}"
+        print(f"An error occurred in ElevenLabs TTS: {e}")
+        print("Falling back to gTTS...")
+        return text_to_speech_with_gtts(input_text, output_filepath)
 
-# def autoplay_audio(file_path):
-#     """
-#     Autoplay an audio file based on the operating system.
-
-#     Args:
-#         file_path (str): Path to the audio file.
-#     """
-#     try:
-#         if platform.system() == "Windows":
-#             subprocess.run(["start", "", file_path], shell=True)  # ✅ Uses default player
-#         elif platform.system() == "Darwin":  # macOS
-#             subprocess.run(["afplay", file_path])
-#         elif platform.system() == "Linux":  # Linux
-#             subprocess.run(["aplay", file_path])  # Use 'aplay' for Linux
-#         else:
-#             raise OSError("Unsupported Operating System")
-#     except Exception as e:
-#         return f"An error occurred while playing the audio: {e}"
-
-# Example usage
-# if __name__ == "__main__":
-#     input_text = "Hi, this is Dr AI. How can I assist you today?"
-
-#     # Test gTTS
-#     #text_to_speech_with_gtts(input_text, output_filepath="gtts_testing_autoplay.mp3")
-
-#     # Test ElevenLabs
-#     text_to_speech_with_elevenlabs(input_text, output_filepath="elevenlabs_testing_autoplay.mp3")
+# Test with a simple text to ensure everything works
+if __name__ == "__main__":
+    try:
+        text_to_speech_with_elevenlabs("Hello, this is a test.", "test_output.mp3")
+    except Exception as e:
+        print(f"Error in text_to_speech_with_elevenlabs: {e}")

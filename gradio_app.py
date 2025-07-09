@@ -1,7 +1,5 @@
 import gradio as gr
 import os
-
-# Import custom functions
 from brain_of_the_doctor import encode_image, analyze_with_query
 from voice_of_the_patient import record_audio, transcribe_with_groq
 from voice_of_the_doctor import text_to_speech_with_elevenlabs
@@ -42,6 +40,7 @@ def process_input(audio_path, image_path):
 
         # Transcribe audio
         transcribed_text = transcribe_with_groq(audio_path, GROQ_API_KEY)
+        print(f"Transcribed text: {transcribed_text}")  # Debugging line
     except Exception as e:
         return f"Error transcribing audio: {e}", "", None
 
@@ -54,11 +53,12 @@ def process_input(audio_path, image_path):
     
     try:
         ai_response = analyze_with_query(image_path, full_query)
+        print(f"AI Response: {ai_response}")  # Debugging line
     except Exception as e:
         return transcribed_text, f"Error analyzing image: {e}", None
 
     # Step 3: Convert AI response to speech
-    output_audio_path = "doctor_response.mp3"
+    output_audio_path = os.path.join(os.getcwd(), "doctor_response.mp3")  # Absolute path for saving audio
     try:
         text_to_speech_with_elevenlabs(ai_response, output_audio_path)
     except Exception as e:
@@ -66,32 +66,6 @@ def process_input(audio_path, image_path):
 
     return transcribed_text, ai_response, output_audio_path
 
-    # Step 3: Convert AI response to speech
-    output_audio_path = "doctor_response.mp3"
-    try:
-        text_to_speech_with_elevenlabs(ai_response, output_audio_path)
-    except Exception as e:
-        return transcribed_text, ai_response, f"Error generating speech: {e}"
-
-    return transcribed_text, ai_response, output_audio_path
-
-    # Step 3: Convert AI response to speech
-    output_audio_path = "doctor_response.mp3"
-    try:
-        text_to_speech_with_elevenlabs(ai_response, output_audio_path)
-    except Exception as e:
-        return transcribed_text, ai_response, f"Error generating speech: {e}"
-
-    return transcribed_text, ai_response, output_audio_path
-
-    # Step 3: Convert AI response to speech
-    output_audio_path = "doctor_response.mp3"
-    try:
-        text_to_speech_with_gtts(ai_response, output_audio_path)
-    except Exception as e:
-        return transcribed_text, ai_response, f"Error generating speech: {e}"
-
-    return transcribed_text, ai_response, output_audio_path
 
 # Create the Gradio interface
 iface = gr.Interface(
